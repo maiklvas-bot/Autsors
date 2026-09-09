@@ -29,6 +29,13 @@
       "when": 1788912000000,
       "tag": "0003_branch_catalog",
       "breakpoints": true
+    },
+    {
+      "idx": 4,
+      "version": "6",
+      "when": 1788955200000,
+      "tag": "0004_current_branches_and_city_access",
+      "breakpoints": true
     }
   ]
 }
