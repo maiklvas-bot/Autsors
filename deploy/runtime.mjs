@@ -1,0 +1,10 @@
+import {DatabaseSync} from 'node:sqlite';
+import fs from 'node:fs';import path from 'node:path';import crypto from 'node:crypto';
+const root=process.env.DATA_DIR||'/data';fs.mkdirSync(root,{recursive:true});
+export const sqlite=new DatabaseSync(path.join(root,'app.sqlite'));sqlite.exec('PRAGMA journal_mode=WAL; PRAGMA busy_timeout=5000; CREATE TABLE IF NOT EXISTS migrations(name TEXT PRIMARY KEY)');
+for(const name of fs.readdirSync('drizzle').filter(x=>x.endsWith('.sql')).sort()){if(sqlite.prepare('SELECT name FROM migrations WHERE name=?').get(name))continue;sqlite.exec('BEGIN IMMEDIATE');try{sqlite.exec(fs.readFileSync('drizzle/'+name,'utf8'));sqlite.prepare('INSERT INTO migrations VALUES(?)').run(name);sqlite.exec('COMMIT');}catch(e){sqlite.exec('ROLLBACK');throw e;}}
+class Statement{constructor(q,p=[]){this.q=q;this.p=p;}bind(...p){return new Statement(this.q,p);}async first(){return sqlite.prepare(this.q).get(...this.p)||null;}async all(){return {results:sqlite.prepare(this.q).all(...this.p),meta:{changes:0}};}async run(){return {meta:{changes:Number(sqlite.prepare(this.q).run(...this.p).changes)}};}}
+const DB={prepare:q=>new Statement(q),batch:async ss=>{sqlite.exec('BEGIN IMMEDIATE');try{const r=[];for(const s of ss)r.push({meta:{changes:Number(sqlite.prepare(s.q).run(...s.p).changes)}});sqlite.exec('COMMIT');return r;}catch(e){sqlite.exec('ROLLBACK');throw e;}}};
+const objectPath=key=>path.join(root,'objects',crypto.createHash('sha256').update(key).digest('hex'));
+const BUCKET={async put(key,bytes,options={}){fs.mkdirSync(path.join(root,'objects'),{recursive:true});const file=objectPath(key);fs.writeFileSync(file+'.tmp',Buffer.from(bytes));fs.renameSync(file+'.tmp',file);fs.writeFileSync(file+'.json',JSON.stringify(options.httpMetadata||{}));},async get(key){const file=objectPath(key);if(!fs.existsSync(file))return null;return {body:fs.readFileSync(file),httpMetadata:JSON.parse(fs.readFileSync(file+'.json','utf8'))};},async delete(key){for(const suffix of ['', '.json'])fs.rmSync(objectPath(key)+suffix,{force:true});}};
+export const runtimeEnv={...process.env,SELF_HOSTED:'true',DB,BUCKET};

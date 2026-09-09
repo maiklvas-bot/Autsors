@@ -1,0 +1,2 @@
+import {env} from 'cloudflare:workers';import {deliverNotifications} from '../../lib/telegram';
+export async function POST(r:Request){const secret=(env as any).REMINDER_SECRET;if(!secret||r.headers.get('Authorization')!==`Bearer ${secret}`)return new Response('Forbidden',{status:403});try{return Response.json(await deliverNotifications());}catch{return Response.json({error:'Доставка не завершена. Повторите запуск.'},{status:503});}}

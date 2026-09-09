@@ -1,0 +1,2 @@
+export async function readBytes(r:Request,limit:number){const reader=r.body?.getReader();if(!reader)return new Uint8Array();const chunks:Uint8Array[]=[];let size=0;for(;;){const {done,value}=await reader.read();if(done)break;size+=value.length;if(size>limit){await reader.cancel();throw new Error('Слишком большой запрос');}chunks.push(value);}const result=new Uint8Array(size);let i=0;for(const c of chunks){result.set(c,i);i+=c.length;}return result;}
+export async function readJson(r:Request,limit=65536){return JSON.parse(new TextDecoder().decode(await readBytes(r,limit)));}

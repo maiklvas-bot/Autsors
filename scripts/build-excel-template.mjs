@@ -1,0 +1,22 @@
+import fs from 'node:fs/promises';
+import {Workbook,SpreadsheetFile} from '@oai/artifact-tool';
+const w=Workbook.create(),s=w.worksheets.add('Месяц');const out=process.argv[2];if(!out)throw new Error('Pass a scratch output directory; run with the primary-runtime Node and artifact-tool');await fs.mkdir(out,{recursive:true});
+s.showGridLines=false;s.getRange('A1:P45').format={font:{name:'Arial',size:10,color:'#26313D'},rowHeight:22,columnWidth:14};
+s.getRange('B1:B45').format.columnWidth=25;s.getRange('C1:C45').format.columnWidth=23;s.getRange('J1:M45').format.columnWidth=23;
+s.getRange('A1:P2').merge();s.getRange('A1').values=[['DNS · Внешний персонал · Филиал']];s.getRange('A1:P2').format={fill:'#ED6A14',font:{bold:true,color:'#FFFFFF',size:18}};
+s.getRange('A3:P3').merge();s.getRange('A3').values=[['Период: 01.01.2026 — 31.01.2026']];s.getRange('A5:P5').merge();s.getRange('A5').values=[['Факт — сотрудники с подтверждёнными часами больше нуля. Незакрытые смены не включены в фактические часы.']];
+s.getRange('A7:H7').values=[['Дата','Сотрудники: план','Сотрудники: факт','План, ч','Факт, ч','Не закрыто','Разница, ч','День']];
+s.getRange('A43:P43').values=[['Дата','Сотрудник','Должность','Начало','Конец','Перерыв, мин','План, ч','Отчёт, ч','Факт, ч','Статус','Качество','Причина / комментарий','Подтвердил','Первый за день: план','Первый за день: факт','ID сотрудника']];
+for(const range of ['A7:H7','A43:P43'])s.getRange(range).format={fill:'#EEF0F2',font:{bold:true},wrapText:true,rowHeight:36};
+s.getRange('A44:P45').values=[[46023,'Иван Тестов','Сотрудник зала',9/24,18/24,60,null,8,8,'Подтверждена','Всё в порядке','','Управляющий',null,null,'e1'],[46024,'Иван Тестов','Сотрудник зала',9/24,18/24,60,null,null,null,'Назначена','','','',null,null,'e1']];
+s.getRange('A8:A38').values=Array.from({length:31},(_,i)=>[46023+i]);
+for(let r=44;r<=45;r++){s.getRange(`G${r}`).formulas=[[`=IF(J${r}="Отменена",0,ROUND((MOD(E${r}-D${r},1)*1440-F${r})/60,2))`]];s.getRange(`N${r}`).formulas=[[`=IF(J${r}="Отменена",0,IF(COUNTIFS($A$44:A${r},A${r},$P$44:P${r},P${r},$J$44:J${r},"<>Отменена")=1,1,0))`]];s.getRange(`O${r}`).formulas=[[`=IF(AND(J${r}="Подтверждена",I${r}>0),IF(COUNTIFS($A$44:A${r},A${r},$P$44:P${r},P${r},$J$44:J${r},"Подтверждена",$I$44:I${r},">0")=1,1,0),0)`]];}
+for(let r=8;r<=38;r++){s.getRange(`B${r}:H${r}`).formulas=[[`=SUMIF($A$44:$A$45,A${r},$N$44:$N$45)`,`=SUMIF($A$44:$A$45,A${r},$O$44:$O$45)`,`=SUMIF($A$44:$A$45,A${r},$G$44:$G$45)`,`=SUMIF($A$44:$A$45,A${r},$I$44:$I$45)`,`=COUNTIFS($A$44:$A$45,A${r},$J$44:$J$45,"<>Подтверждена",$J$44:$J$45,"<>Отменена")`,`=E${r}-D${r}`,`=DAY(A${r})&"."&MONTH(A${r})`]];}
+s.getRange('A40').values=[['Итого']];s.getRange('D40:G40').formulas=[['=SUM(D8:D38)','=SUM(E8:E38)','=SUM(F8:F38)','=E40-D40']];s.getRange('A40:H40').format={fill:'#EEF0F2',font:{bold:true}};
+s.getRange('A8:A38').setNumberFormat('yyyy-mm-dd');s.getRange('A44:A45').setNumberFormat('yyyy-mm-dd');s.getRange('D44:E45').setNumberFormat('hh:mm');s.getRange('B8:C40').setNumberFormat('0');s.getRange('D8:G40').setNumberFormat('0.00');s.getRange('F8:F40').setNumberFormat('0');s.getRange('G44:I45').setNumberFormat('0.00');s.getRange('L44:L45').format.wrapText=true;s.freezePanes.freezeRows(7);
+const chart=s.charts.add('line',{title:'Количество сотрудников по дням',hasLegend:true});for(const [i,name,col,color] of [[0,'План','B','#AAB2BC'],[1,'Факт','C','#ED6A14']]){const series=chart.series.add(name);series.categoryFormula="'Месяц'!$H$8:$H$38";series.formula=`'Месяц'!$${col}$8:$${col}$38`;series.fill=color;}chart.setPosition('I7','M24');chart.title='Количество сотрудников по дням';chart.titleTextStyle.fontSize=13;chart.xAxis={axisType:'textAxis',tickLabelInterval:5};chart.yAxis={numberFormatCode:'0',min:0,majorUnit:1};
+s.getRange('I27:P29').merge();s.getRange('I27').values=[['Ниже — реестр смен. Колонки N–P нужны для подсчёта уникальных сотрудников по каждому дню. График связан с дневной таблицей.']];s.getRange('I27:P29').format.wrapText=true;
+console.log((await w.inspect({kind:'table',range:'Месяц!A8:G9',include:'values,formulas',maxChars:1200})).ndjson);
+console.log((await w.inspect({kind:'match',searchTerm:'#REF!|#DIV/0!|#VALUE!|#NAME\\?|#N/A',options:{useRegex:true,maxResults:10},maxChars:1000})).ndjson);
+const png=await w.render({sheetName:'Месяц',range:'A1:P45',scale:1,format:'png'});await fs.writeFile(out+'/preview.png',new Uint8Array(await png.arrayBuffer()));
+await (await SpreadsheetFile.exportXlsx(w)).save(out+'/template.xlsx');

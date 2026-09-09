@@ -1,0 +1,6 @@
+import {digest} from './passwords';
+import {env} from 'cloudflare:workers';
+import {db} from './server';
+import {telegram} from './telegram';
+let connecting=false;
+export async function ensureTelegramConnected(){const cfg=env as any;if(cfg.TELEGRAM_AUTO_CONNECT!=='true'||!cfg.PUBLIC_ORIGIN||!cfg.TELEGRAM_BOT_TOKEN||!cfg.TELEGRAM_WEBHOOK_SECRET||connecting)return;connecting=true;try{const url=new URL('/api/telegram',cfg.PUBLIC_ORIGIN).href;if(!url.startsWith('https://'))return;const key='telegram-setup:'+digest(url+cfg.TELEGRAM_BOT_TOKEN+cfg.TELEGRAM_WEBHOOK_SECRET);const done=await db().prepare('SELECT id FROM bot_sessions WHERE id=?').bind(key).first();if(done)return;await telegram('setWebhook',{url,secret_token:cfg.TELEGRAM_WEBHOOK_SECRET,allowed_updates:['message','callback_query'],drop_pending_updates:false});await telegram('setMyCommands',{commands:[{command:'start',description:'Войти по коду или открыть меню'},{command:'menu',description:'Главное меню'},{command:'cancel',description:'Отменить текущий ввод'}]});await db().prepare('INSERT OR REPLACE INTO bot_sessions(id,body) VALUES(?,?)').bind(key,JSON.stringify({at:Date.now()})).run();console.info('Telegram webhook configured');}catch{console.error('Telegram automatic connection failed');}finally{connecting=false;}}

@@ -1,0 +1,9 @@
+.git
+node_modules
+dist
+.sites-runtime
+.wrangler
+.env*
+.install-secrets
+*.tar.gz
+*.sqlite*

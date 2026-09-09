@@ -1,0 +1,5 @@
+import {readJson} from '../../lib/request';
+import {env} from 'cloudflare:workers';import {handleUpdate} from '../../lib/telegram';import {db} from '../../lib/server';
+export async function POST(r:Request){const secret=(env as any).TELEGRAM_WEBHOOK_SECRET;if(!secret||r.headers.get('X-Telegram-Bot-Api-Secret-Token')!==secret)return new Response('Forbidden',{status:403});if(Number(r.headers.get('content-length')||0)>1000000)return new Response('Too large',{status:413});let id:number|undefined;try{const update=await readJson(r,1000000);id=update.update_id;if(!Number.isSafeInteger(id))return new Response('Invalid update',{status:400});const result=await db().prepare('INSERT OR IGNORE INTO telegram_updates(id,at) VALUES(?,?)').bind(id,Date.now()).run();if(!result.meta.changes)return Response.json({ok:true});await handleUpdate(update);return Response.json({ok:true});}catch{if(id!==undefined)await db().prepare('DELETE FROM telegram_updates WHERE id=?').bind(id).run();return new Response('Retry later',{status:500});}}
+
+export async function GET(){return Response.json({service:'dns-telegram-webhook'},{headers:{'Cache-Control':'no-store'}});}

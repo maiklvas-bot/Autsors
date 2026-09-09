@@ -1,0 +1,4 @@
+import {readJson} from '../../lib/request';
+import {identity,mutate,payload,sameOrigin} from '../../lib/server';
+export async function GET(){try{const {s,m}=await identity();return Response.json(payload(s,m),{headers:{'Cache-Control':'no-store'}});}catch(e){const status=(e as Error & {status?:number}).status||500;if(status===500)console.error('State load failed:',(e as Error).message);return Response.json({error:status===500?'Не удалось загрузить рабочую базу. Повторите попытку.':(e as Error).message},{status,headers:{'Cache-Control':'no-store'}});}}
+export async function POST(r:Request){try{sameOrigin(r);const {m}=await identity();const a=await readJson(r,65536);if(a.type==='member')throw new Error('Используйте форму управления пользователями');const s=await mutate(m,a);return Response.json(payload(s,m));}catch(e){return Response.json({error:(e as Error).message},{status:400});}}
