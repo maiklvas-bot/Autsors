@@ -39,6 +39,10 @@ test("uses one explicit temporary brand mark instead of repeated text logos", ()
   assert.doesNotMatch(accountGate, /className="auth-brand"><b>DNS<\/b>/);
 });
 
+test("keeps owner PIN recovery reachable in the loopback local preview", () => {
+  assert.match(accountGate, /status\?\.selfHosted\?\(status\?\.canRecoverOwner&&!recover&&<button/);
+});
+
 test("groups navigation around user workflows and names instructions clearly", () => {
   assert.match(workspace, /const navGroups=/);
   for (const label of ["Работа", "Отчёты", "Материалы", "Управление"]) {

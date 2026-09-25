@@ -33,3 +33,26 @@ test('self-hosted runtime persists login and rejects forged platform identity',a
     const home=await fetch('http://127.0.0.1:3000/');assert.equal(home.status,200);assert.match(await home.text(),/DNS/);
   }finally{await stop();fs.rmSync(dir,{recursive:true,force:true});}
 },{timeout:20000});
+
+test('explicit local preview uses loopback HTTP without weakening the default cookie',async()=>{
+  const dir=fs.mkdtempSync(path.join(os.tmpdir(),'dns-local-preview-test-'));
+  const env={...process.env,DATA_DIR:dir,PUBLIC_ORIGIN:'http://127.0.0.1:3001',PORT:'3001',LOCAL_PREVIEW:'true',REMINDER_SECRET:'testsecret',TELEGRAM_AUTO_CONNECT:'false'};
+  const seed=spawnSync(process.execPath,['deploy/admin.mjs'],{env,input:JSON.stringify({email:'maiklvas@gmail.com',pin:'0048'}),encoding:'utf8'});
+  assert.equal(seed.status,0,seed.stderr);
+  const server=spawn(process.execPath,['deploy/server.mjs'],{env,stdio:['ignore','pipe','pipe']});
+  let errors='';server.stderr.on('data',x=>errors+=x);
+  try{
+    for(let i=0;i<50;i++){try{const r=await fetch(env.PUBLIC_ORIGIN+'/healthz');if(r.ok)break;}catch{}await new Promise(r=>setTimeout(r,100));}
+    let response=await fetch(env.PUBLIC_ORIGIN+'/api/auth');
+    assert.equal((await response.json()).canRecoverOwner,true);
+    response=await fetch(env.PUBLIC_ORIGIN+'/api/auth',{method:'POST',headers:{Origin:env.PUBLIC_ORIGIN,'Content-Type':'application/json'},body:JSON.stringify({action:'recoverOwner',password:'0059'})});
+    assert.equal(response.status,200,errors||await response.text());
+    const cookie=response.headers.get('set-cookie')||'';
+    assert.match(cookie,/^dns-local-session=/);
+    assert.match(cookie,/HttpOnly/);
+    assert.doesNotMatch(cookie,/; Secure/);
+  }finally{
+    if(server.exitCode===null)await new Promise(resolve=>{server.once('exit',resolve);server.kill('SIGTERM');});
+    fs.rmSync(dir,{recursive:true,force:true});
+  }
+},{timeout:20000});
