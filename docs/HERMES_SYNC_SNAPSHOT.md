@@ -47,4 +47,6 @@
 
 ## Статус публикации
 
-Рабочая ветка подготовлена локально. До отдельного подтверждения она не отправляется в GitHub; этот снимок не утверждает remote publication или green CI.
+Первичный project snapshot опубликован в commit `d7df45a0ed9127585deeeeb65e2f9e5d3da55f26` на remote-ветке `feature/hermes-knowledge-sync`. Открыт PR #7 в `main`. Два GitHub Actions run для этого commit завершились успешно: `npm ci`, `npm test` и Docker build прошли на `ubuntu-latest`.
+
+Этот metadata update следует после project snapshot, поэтому его собственный HEAD и CI проверяются отдельно и не подменяют provenance commit `d7df45a`.
