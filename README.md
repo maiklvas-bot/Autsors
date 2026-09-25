@@ -32,6 +32,7 @@ bash install.sh
 - [Руководство пользователя и команды бота](docs/USER_GUIDE.md)
 - [Архитектура](docs/ARCHITECTURE.md)
 - [Статус проверки и ограничения](docs/LAUNCH.md)
+- [Снимок синхронизации Hermes ↔ GitHub ↔ Obsidian](docs/HERMES_SYNC_SNAPSHOT.md)
 - [Безопасность](SECURITY.md)
 - [Правила изменений](CONTRIBUTING.md)
 - [История версий](CHANGELOG.md)
